@@ -1,0 +1,11 @@
+{
+  "collected_utc": "2026-09-30T17:37:05.424013+00:00",
+  "repository": "https://github.com/CliMA/Oceananigans.jl",
+  "main_sha": "b9725744cd313ed368bb7906880a5d884c4c78bf",
+  "last_complete_month": "2026-08",
+  "partial_month": "2026-09",
+  "prs": 3731,
+  "pr_snapshot_fields": "Fields used in the analysis only; public PR descriptions retained verbatim.",
+  "commits": 13845,
+  "snapshot_note": "PR count corrected from stale collector metadata (3600) to verified saved records (3731). Collection time is the original recorded timestamp; pagination and git snapshot are not atomic."
+}

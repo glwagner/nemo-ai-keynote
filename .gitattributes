@@ -1,0 +1,2 @@
+# Preserve CSV line endings and source text exactly, including quoted whitespace.
+analysis/data/*.csv -text -whitespace
