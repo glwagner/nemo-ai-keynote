@@ -27,11 +27,14 @@ All seven figures are provided as PNG and vector PDF in [`analysis/`](analysis/)
 
 ## Reproduce the figures
 
+The [NEMO analysis](nemo-analysis/README.md) applies the same approach to 1,214 public merge requests and 2,258 distinct commits across NEMO's main and release branches, captured on 6 October 2026. No searched AI-tool markers were found. Discussion APIs require authentication, and no comments were assessed; zero public disclosure does not establish zero AI use. Three additional Julia-generated figures show NEMO activity and the disclosure comparison.
+
 Requires Python 3 (standard library only), Julia 1.12, and GNU Make or an equivalent make. The Julia environment is pinned in `analysis/Project.toml` and `analysis/Manifest.toml`. Plots request Arial; font substitution may change layout on systems without it.
 
 ```sh
 make setup       # Install the pinned Julia dependencies
 make reproduce   # Check input hashes, rebuild tables, render all seven figures
+make nemo        # Rebuild the NEMO analysis and its three figures
 ```
 
 The frozen inputs are included, so rebuilding does not require GitHub authentication or a fresh data download. `analysis/data/SHA256SUMS` records their checksums. To run without Make, see [`analysis/README.md`](analysis/README.md).

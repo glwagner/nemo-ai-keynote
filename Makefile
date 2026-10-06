@@ -1,7 +1,7 @@
 PYTHON ?= python3
 JULIA ?= julia
 
-.PHONY: reproduce tables figures setup verify-data
+.PHONY: reproduce tables figures setup verify-data nemo
 
 reproduce: verify-data tables figures
 
@@ -19,3 +19,8 @@ figures: tables
 	$(JULIA) --startup-file=no --project=analysis analysis/plot_history.jl
 	$(JULIA) --startup-file=no --project=analysis analysis/plot_claude_share.jl
 	$(JULIA) --startup-file=no --project=analysis analysis/plot_combined_share.jl
+
+nemo:
+	cd nemo-analysis/data && shasum -a 256 -c SHA256SUMS
+	$(PYTHON) nemo-analysis/analyze.py
+	$(JULIA) --startup-file=no --project=analysis nemo-analysis/plot.jl

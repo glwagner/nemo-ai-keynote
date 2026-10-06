@@ -1,0 +1,113 @@
+{
+  "snapshot": {
+    "repository": "https://forge.nemo-ocean.eu/nemo/nemo",
+    "default_branch": "main",
+    "project_created_at": "2021-11-30T10:52:09.551Z",
+    "public_merge_requests": 1214,
+    "collection_started_utc": "2026-10-06T23:17:34.548397+00:00",
+    "collection_finished_utc": "2026-10-06T23:17:50.881717+00:00",
+    "api_endpoint": "https://forge.nemo-ocean.eu/api/v4/projects/24/merge_requests",
+    "pagination_pages": 13,
+    "first_page_reported_total": 1214,
+    "main_sha": "92d51bdffa24de9e7c14e0624759cb4bfc13d35f",
+    "main_commits": 1555,
+    "last_complete_month": "2026-09",
+    "partial_month": "2026-10",
+    "branches": {
+      "main": {
+        "sha": "92d51bdffa24de9e7c14e0624759cb4bfc13d35f",
+        "commits": 1555
+      },
+      "branch_5.0": {
+        "sha": "501597e3f5739b0a9484cd9f260f7309da8d1376",
+        "commits": 1323
+      },
+      "branch_4.2": {
+        "sha": "2a3645ca7dd56acd4fea5bd570890f4fbe4739da",
+        "commits": 488
+      }
+    }
+  },
+  "merge_requests": 1214,
+  "mr_states": {
+    "closed": 135,
+    "merged": 1008,
+    "opened": 71
+  },
+  "target_branches": {
+    "main": 803,
+    "branch_4.2": 177,
+    "dev_2021_rk3_halo": 2,
+    "68-summer-body-2022": 17,
+    "110-does-not-compile-in-sigle-precision": 3,
+    "180-merge-fiesta-code-cleanup": 1,
+    "4.2.1": 2,
+    "branch_5.0": 202,
+    "5.0-RC": 1,
+    "583-review-of-the-tidal-constituent-parameters": 3,
+    "from_fork-14": 1,
+    "671-refactoring-si3-routines-for-gpu": 1,
+    "5.0.1": 1
+  },
+  "authors": 56,
+  "bot_mrs": 0,
+  "main_commits": 1555,
+  "three_branch_unique_commits": 2258,
+  "earliest_main_commit": "2021-11-30",
+  "claude_trailers": 0,
+  "codex_trailers": 0,
+  "ai_primary_authors": 0,
+  "mr_keyword_matches": 0,
+  "commit_keyword_matches": 0,
+  "notes_searched": 0,
+  "matches": [],
+  "jan_aug": [
+    {
+      "year": 2022,
+      "mrs_opened": 126,
+      "mrs_merged": 88,
+      "authors": 19,
+      "first_time_authors": 13,
+      "main_target_opened": 91,
+      "main_target_merged": 60
+    },
+    {
+      "year": 2023,
+      "mrs_opened": 134,
+      "mrs_merged": 109,
+      "authors": 24,
+      "first_time_authors": 10,
+      "main_target_opened": 87,
+      "main_target_merged": 65
+    },
+    {
+      "year": 2024,
+      "mrs_opened": 237,
+      "mrs_merged": 224,
+      "authors": 20,
+      "first_time_authors": 5,
+      "main_target_opened": 187,
+      "main_target_merged": 183
+    },
+    {
+      "year": 2025,
+      "mrs_opened": 172,
+      "mrs_merged": 149,
+      "authors": 17,
+      "first_time_authors": 3,
+      "main_target_opened": 89,
+      "main_target_merged": 75
+    },
+    {
+      "year": 2026,
+      "mrs_opened": 155,
+      "mrs_merged": 125,
+      "authors": 20,
+      "first_time_authors": 5,
+      "main_target_opened": 94,
+      "main_target_merged": 70
+    }
+  ],
+  "main_2026_commits": 170,
+  "main_jan_aug_2026_commits": 144
+}
