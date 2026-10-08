@@ -15,6 +15,10 @@ Working presentation and supporting analysis. The presentation snapshots were ex
 
 The talk considers AI in model **usage**, **development**, and **parameterization**, including opportunities for faster experimentation and risks to attribution, understanding, human control, and equitable access.
 
+## North Atlantic simulation
+
+[`north-atlantic/`](north-atlantic/README.md) contains a cheap 1/4ᵒ, 4-layer regional North Atlantic simulation built with Oceananigans and NumericalEarth: initialized from GLORYS, restored to ECCO at the open boundaries, and forced by JRA55-do for three months, with an animation of surface speed.
+
 ## Oceananigans development analysis
 
 [Methods, findings, and limitations](analysis/README.md) document an observational analysis of the public [CliMA/Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) repository, captured on **30 September 2026**: 3,731 PRs and 13,845 commits reachable from main at `b9725744cd313ed368bb7906880a5d884c4c78bf`.
