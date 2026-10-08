@@ -1,0 +1,6 @@
+NETCDF_INCDIR="-I/opt/homebrew/include"
+NETCDF_LIBDIR="-L/opt/homebrew/lib"
+NETCDF_LIB="-lnetcdff -lnetcdf"
+HDF5_INCDIR="-I/opt/homebrew/opt/hdf5/include"
+HDF5_LIBDIR="-L/opt/homebrew/opt/hdf5/lib"
+HDF5_LIB="-lhdf5_hl -lhdf5 -lz"

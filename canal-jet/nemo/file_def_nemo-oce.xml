@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+    <file_definition type="one_file" name="@expname@" sync_freq="10d" min_digits="4">
+      <file_group id="6h" output_freq="6h" output_level="10" enabled=".TRUE." >
+        <file id="file1" name_suffix="_grid_T" description="ocean T grid variables" >
+          <field field_ref="soce" operation="instant" />
+          <field field_ref="ssh" operation="instant" />
+          <field field_ref="ssrelvor" operation="instant" />
+        </file>
+      </file_group>
+    </file_definition>
