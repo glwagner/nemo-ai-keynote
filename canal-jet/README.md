@@ -15,7 +15,7 @@ initial condition, but different numerics.
 
 | | NEMO 4.2.2 | Oceananigans 0.113.5 |
 |---|---|---|
-| Momentum advection | 3rd-order upstream-biased (UBS), flux form | `WENO(order = 9)` |
+| Momentum advection | 3rd-order upstream-biased (UBS), flux form | `WENOVectorInvariant(order = 9)` |
 | Tracer advection | UBS | `WENO(order = 9)` |
 | Explicit dissipation | Bilaplacian viscosity, `rn_Uv = 1 m/s` grid-scale coefficient (≈1×10¹⁰ m⁴ s⁻¹) | None (`closure = nothing`) |
 | Time stepping | Leapfrog, Asselin filter 0.1 | Quasi-Adams-Bashforth 2 |
@@ -26,18 +26,33 @@ initial condition, but different numerics.
 
 ## What differs
 
-- **Onset.** NEMO's shear layers grow from day 2 and roll up into billows by day 15–20.
-  The Oceananigans jet stays nearly unperturbed for ~30 days, then grows faster than NEMO's ever did.
-  Zonal-anomaly variance of the dye rises ~40× every 4 days in NEMO from day 2,
-  and ~250× every 4 days in Oceananigans between days 30 and 42.
-- **Shear-layer width and eddy size.** NEMO's vorticity sheets smear to ~50 km
-  and roll up into a few large, weak eddies (|ζ/f| ≲ 0.4). Oceananigans keeps the
-  sheets one or two cells thick, and they break into many small, intense vortices (|ζ/f| ≈ 1).
+- **Onset.** Both jets go unstable on similar timescales. NEMO's shear layers grow steadily from day 2:
+  the dye's zonal-anomaly variance rises ~40× every 4 days.
+  Oceananigans' grows slowly until day ~10, then very quickly. Both saturate around days 20–26.
+- **Shear-layer width and eddy size.** NEMO's vorticity sheets smear to ~50 km and roll up into
+  ~8 regularly spaced billows, then a few large, weak eddies (|ζ/f| ≲ 0.4). Oceananigans keeps the
+  sheets one or two cells thick. They break into many small, intense vortices (|ζ/f| ≈ 1),
+  which merge into compact, intense eddies.
 
-Free-surface noise in a 1000 m deep ocean projects almost entirely onto gravity waves, which radiate away.
-The balanced (potential-vorticity) seed it leaves behind is tiny. So onset time is likely set
-by how much each model's numerics perturb the sharp initial jet edges rather than by the imposed noise.
-This explanation has not been tested, for example by varying noise amplitude, scheme, or resolution.
+## Flux-form momentum advection suppresses the instability
+
+Momentum advection is vector-invariant here. With flux-form `momentum_advection = WENO(order = 9)`, the
+Oceananigans jet stays nearly unperturbed for ~30 days. Diagnostic runs were seeded with a 250 km,
+1 mm s⁻¹ meridional-velocity perturbation at the jet edges. The table gives the change in dye zonal-anomaly variance:
+
+| Momentum advection | Top-hat jet | Jet with 10 km tanh edges |
+|---|---|---|
+| `WENO(order = 9)` (flux form) | oscillates and decays | grows ~4× per day |
+| `Centered(order = 2)` (flux form) | oscillates and decays | grows ~4× per day |
+| `WENOVectorInvariant(order = 9)` | grows 2.5–8× per day, saturates by day 10 | — |
+| `VectorInvariant()` | grows 2–4× per day | — |
+
+Suppression did not change with the time stepper (QAB2 or split RK3), the time step (10 or 2 min),
+or the free-surface solver (split-explicit or implicit). Instantaneous flux-form and vector-invariant tendencies
+agree closely on the same state (correlation 0.97–0.997), and the vertical-flux term is ~1% of the total.
+So the cause is not a single wrong term; it remains unidentified. Flux-form momentum advection
+fails only when the jet edge is a one-cell discontinuity.
+
 Neither model is converged at 5 km for a discontinuous initial jet.
 
 The unmodified NEMO `CANAL` namelist uses no explicit viscosity and no Asselin filter (`rn_atfp = 0`).

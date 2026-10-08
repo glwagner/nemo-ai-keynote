@@ -1,7 +1,8 @@
 # # Barotropic instability of a zonal jet: Oceananigans replica of NEMO's CANAL test case
 #
 # Reproduces NEMO 4.2's `tests/CANAL` configuration with `nn_initcase = 1` (geostrophic zonal jet)
-# on the same grid and initial condition, but with 9th-order WENO advection and no turbulence closure:
+# on the same grid and initial condition, but with 9th-order WENO advection (vector-invariant form for
+# momentum) and no turbulence closure:
 #
 # * f-plane at 38.5ᵒN, flat bottom, 1000 m deep, single vertical level,
 # * 5 km grid: 401 cells periodic in x (2005 km), 199 ocean cells between walls in y (995 km),
@@ -27,7 +28,7 @@ Nx = 401
 Ny = 199
 H = 1000meters
 
-grid = RectilinearGrid(arch; size = (Nx, Ny, 1), halo = (5, 5, 5),
+grid = RectilinearGrid(arch; size = (Nx, Ny, 1), halo = (6, 6, 5),
                        x = (-Nx * Δ / 2, Nx * Δ / 2),
                        y = (-Ny * Δ / 2, Ny * Δ / 2),
                        z = (-H, 0),
@@ -38,10 +39,13 @@ coriolis = FPlane(latitude = 38.5)
 # With 60 substeps per 10-minute step, the barotropic CFL number √(gH) Δt / 60Δ is ≈ 0.2.
 free_surface = SplitExplicitFreeSurface(grid; substeps = 60)
 
+# Flux-form momentum advection (`momentum_advection = WENO(order = 9)`, or `Centered(order = 2)`)
+# does not let the one-cell-wide shear layers of the top-hat jet go unstable: a seeded 250 km
+# perturbation oscillates and decays. The vector-invariant form grows it at the expected rate.
 model = HydrostaticFreeSurfaceModel(grid;
                                     coriolis,
                                     free_surface,
-                                    momentum_advection = WENO(order = 9),
+                                    momentum_advection = WENOVectorInvariant(order = 9),
                                     tracer_advection = WENO(order = 9),
                                     closure = nothing,
                                     buoyancy = nothing,

@@ -84,7 +84,7 @@ title = @lift @sprintf("Barotropic instability of a 1 m s⁻¹ jet  —  day %.2
 Label(fig[0, 1:2], title, fontsize = 24, font = :bold)
 
 Label(fig[1, 1], "NEMO 4.2 · UBS advection, bilaplacian viscosity, leapfrog", tellwidth = false)
-Label(fig[1, 2], "Oceananigans · WENO(order=9), no closure", tellwidth = false)
+Label(fig[1, 2], "Oceananigans · WENOVectorInvariant(order=9) momentum, WENO(order=9) tracer, no closure", tellwidth = false)
 
 axis_kw = (aspect = DataAspect(), xticklabelsvisible = false, yticklabelsvisible = false,
            xticksvisible = false, yticksvisible = false)
