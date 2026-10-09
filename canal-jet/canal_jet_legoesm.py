@@ -8,7 +8,8 @@ lat-lon C-grid ocean on its Cartesian f-plane geometry, configured to mirror the
 * 1 m s⁻¹ top-hat jet over |y| ≤ 200 km in geostrophic balance, plus uniform random
   free-surface noise in [-5, 5] cm; salinity 35 inside the jet and 30 outside, passive (linear EOS
   with zero thermal and haline expansion),
-* WENO9 vector-invariant momentum advection (legoESM's "W9V" preset), WENO7 tracer advection
+* WENO9 vector-invariant momentum advection (legoESM's "W9V" preset with Oceananigans' default
+  self-upwinded divergence smoothness), WENO7 tracer advection
   (legoESM has no WENO9 tracer scheme), no lateral or vertical viscosity/diffusion, no bottom drag,
 * split-explicit free surface (60 substeps), AB2 outer and tracer time stepping, Δt = 10 min.
 
@@ -65,6 +66,10 @@ config = oceananigans_canonical_ocean_config(
     barotropic_slow_forcing_ab2=True, barotropic_diffusion_alpha=0.0,
     n_barotropic_substeps=60)   # the outer AB2 integrator also steps the tracers
 config = apply_silvestri_scheme(config, "W9V")
+# W9V's divergence term uses full-divergence smoothness (Silvestri Eq. 45, CrossAndSelfUpwinding).
+# Oceananigans' WENOVectorInvariant default pairs VelocityStencil vorticity with OnlySelfUpwinding
+# divergence (Eq. 44), which legoESM selects with weno_divergence_smoothness = "standard".
+config = config._replace(weno_divergence_smoothness="standard")
 
 wall = np.ones((Ny, Nx))
 state = rest_state_latlon_cgrid_ocean(grid, z, H_max=H, land_mask_override=wall,

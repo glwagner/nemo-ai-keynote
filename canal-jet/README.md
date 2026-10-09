@@ -16,7 +16,7 @@ but different numerics.
 
 | | NEMO 4.2.2 | Oceananigans 0.113.5 | legoESM 1.0 (`b5204364b`) |
 |---|---|---|---|
-| Momentum advection | 3rd-order upstream-biased (UBS), flux form | `WENOVectorInvariant(order = 9)` | WENO9 vector-invariant (`W9V` preset) |
+| Momentum advection | 3rd-order upstream-biased (UBS), flux form | `WENOVectorInvariant(order = 9)` (velocity-stencil vorticity, self-upwinded divergence) | WENO9 vector-invariant (`W9V` preset with `weno_divergence_smoothness = "standard"`, matching Oceananigans) |
 | Tracer advection | UBS | `WENO(order = 9)` | WENO7 (no WENO9 tracer scheme exists) |
 | Explicit dissipation | Bilaplacian viscosity, `rn_Uv = 1 m/s` grid-scale coefficient (≈1×10¹⁰ m⁴ s⁻¹) | None | None (defaults `A_h = 10⁴ m² s⁻¹` and SSH diffusion turned off) |
 | Time stepping | Leapfrog, Asselin filter 0.1 | Quasi-Adams-Bashforth 2 | AB2 |
@@ -51,6 +51,8 @@ That is ≈9× per day in dye variance.
   then form compact, intense vortices (|ζ/f| ≈ 1) that merge. The late-stage fields look alike.
   The early growth rates differ by ~8× per day, so the two discretizations of nominally the same scheme
   differ in how they treat a one-cell shear layer. Why is not yet diagnosed.
+  The cause is not the divergence smoothness. The `W9V` preset's default full-divergence smoothness
+  and Oceananigans' self-upwinded divergence give legoESM dye variances within 2% through day 20.
 
 ## Performance
 
