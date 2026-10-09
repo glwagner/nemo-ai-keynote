@@ -1,8 +1,9 @@
-# Barotropic jet instability: NEMO vs Oceananigans
+# Barotropic jet instability: NEMO vs Oceananigans vs legoESM
 
-NEMO 4.2.2's `CANAL` test case (`nn_initcase = 1`, a geostrophic zonal jet) and an
-[Oceananigans](https://github.com/CliMA/Oceananigans.jl) replica on the same grid with the same
-initial condition, but different numerics.
+NEMO 4.2.2's `CANAL` test case (`nn_initcase = 1`, a geostrophic zonal jet), replicated in
+[Oceananigans](https://github.com/CliMA/Oceananigans.jl) and in the ocean component of
+[legoESM](https://github.com/climate-federation/legoESM) on the same grid with the same initial condition,
+but different numerics.
 
 | | |
 |---|---|
@@ -13,26 +14,69 @@ initial condition, but different numerics.
 | Tracer | Salinity 35 inside the jet, 30 outside; passive dye (linear EOS with zero haline contraction) |
 | Run | 60 days at Δt = 10 min, snapshots every 6 hours |
 
-| | NEMO 4.2.2 | Oceananigans 0.113.5 |
-|---|---|---|
-| Momentum advection | 3rd-order upstream-biased (UBS), flux form | `WENOVectorInvariant(order = 9)` |
-| Tracer advection | UBS | `WENO(order = 9)` |
-| Explicit dissipation | Bilaplacian viscosity, `rn_Uv = 1 m/s` grid-scale coefficient (≈1×10¹⁰ m⁴ s⁻¹) | None (`closure = nothing`) |
-| Time stepping | Leapfrog, Asselin filter 0.1 | Quasi-Adams-Bashforth 2 |
-| Free surface | Split-explicit | Split-explicit, 60 substeps |
-| Wall time | ≈2 min, 16 MPI ranks, Apple silicon | ≈1.6 min, 8 threads, same machine |
+| | NEMO 4.2.2 | Oceananigans 0.113.5 | legoESM 1.0 (`b5204364b`) |
+|---|---|---|---|
+| Momentum advection | 3rd-order upstream-biased (UBS), flux form | `WENOVectorInvariant(order = 9)` | WENO9 vector-invariant (`W9V` preset) |
+| Tracer advection | UBS | `WENO(order = 9)` | WENO7 (no WENO9 tracer scheme exists) |
+| Explicit dissipation | Bilaplacian viscosity, `rn_Uv = 1 m/s` grid-scale coefficient (≈1×10¹⁰ m⁴ s⁻¹) | None | None (defaults `A_h = 10⁴ m² s⁻¹` and SSH diffusion turned off) |
+| Time stepping | Leapfrog, Asselin filter 0.1 | Quasi-Adams-Bashforth 2 | AB2 |
+| Free surface | Nonlinear (z*), split-explicit | Linear, split-explicit, 60 substeps | Linear, split-explicit, 60 substeps, power-law filter |
+| Grid | Cartesian f-plane (`CANAL` user grid) | `RectilinearGrid` + `FPlane` | Cartesian β-plane C-grid with β = 0 |
+| Precision, hardware | Float64, CPU (MPI) | Float64, CPU (threads) | Float64, CPU (JAX/XLA) |
 
-![NEMO vs Oceananigans](canal_jet_nemo_vs_oceananigans.mp4)
+![NEMO vs Oceananigans vs legoESM](canal_jet_three_models.mp4)
 
 ## What differs
 
-- **Onset.** Both jets go unstable on similar timescales. NEMO's shear layers grow steadily from day 2:
-  the dye's zonal-anomaly variance rises ~40× every 4 days.
-  Oceananigans' grows slowly until day ~10, then very quickly. Both saturate around days 20–26.
-- **Shear-layer width and eddy size.** NEMO's vorticity sheets smear to ~50 km and roll up into
-  ~8 regularly spaced billows, then a few large, weak eddies (|ζ/f| ≲ 0.4). Oceananigans keeps the
-  sheets one or two cells thick. They break into many small, intense vortices (|ζ/f| ≈ 1),
-  which merge into compact, intense eddies.
+All three runs start from similar perturbation levels, then grow at very different rates.
+The table gives zonal-anomaly variance of the dye:
+
+| Day | NEMO | Oceananigans | legoESM |
+|---|---|---|---|
+| 2 | 2.2×10⁻⁸ | 3.9×10⁻⁹ | 2.0×10⁻⁸ |
+| 6 | 2.1×10⁻⁶ | 3.1×10⁻⁸ | 4.4×10⁻⁴ |
+| 10 | 1.1×10⁻⁴ | 1.0×10⁻⁷ | 0.25 |
+| 16 | 2.1×10⁻² | 2.0×10⁻⁴ | 0.89 |
+| 20 | 0.22 | 0.19 | 1.05 |
+| 60 | 3.2 | 2.3 | 2.6 |
+
+For comparison, linear theory for an inviscid vortex sheet at NEMO's ~250 km billow wavelength gives σ = kU/2 ≈ 1.3×10⁻⁵ s⁻¹.
+That is ≈9× per day in dye variance.
+
+- **legoESM** grows at ≈12× per day from day 2 and saturates by day ~10. That is the closest to sheet theory.
+- **NEMO** grows steadily at ≈3× per day. Its bilaplacian viscosity and UBS smear the shear layers to ~50 km, which slows growth.
+  It forms ~8 regularly spaced billows, then a few large, weak eddies (|ζ/f| ≲ 0.4).
+- **Oceananigans** grows at only ≈1.5× per day for ~12 days, then rapidly.
+- Oceananigans and legoESM share the same nominal momentum scheme (WENO9 vector-invariant). Both keep the shear layers sharp,
+  then form compact, intense vortices (|ζ/f| ≈ 1) that merge. The late-stage fields look alike.
+  The early growth rates differ by ~8× per day, so the two discretizations of nominally the same scheme
+  differ in how they treat a one-cell shear layer. Why is not yet diagnosed.
+
+## Performance
+
+60 days (8640 steps) on an Apple-silicon Mac Studio, CPU only:
+
+| | Wall time | Per step | Resources |
+|---|---|---|---|
+| Oceananigans | 125 s (109 s time-stepping + ~15 s Julia load/compile) | 13 ms | 8 threads |
+| NEMO | 154 s | 18 ms | 8 MPI ranks |
+| NEMO | ~126 s | 15 ms | 16 MPI ranks |
+| legoESM | 635 s (2 s JIT compile) | 73 ms | JAX/XLA CPU, ≈4.5 cores busy on average (user + sys time / wall) |
+
+legoESM is ~5× slower than Oceananigans and ~4× slower than NEMO here. It targets GPUs and TPUs.
+On Apple silicon, its docs recommend the CPU backend because Metal is float32-only. Each run is a single measurement.
+
+## legoESM notes
+
+- The ocean component has a Cartesian β-plane C-grid (`create_beta_plane_cgrid_geometry`). With β = 0 it gives an exact f-plane,
+  and an Oceananigans-mirroring config factory (`oceananigans_canonical_ocean_config`) exists for twin experiments.
+  So the replica needed no source changes to the ocean model.
+- Several defaults change the physics silently if not overridden: lateral viscosity `A_h = 10⁴ m² s⁻¹`,
+  SSH diffusion `barotropic_diffusion_alpha = 0.01`, haline contraction `β_S = 7.4×10⁻⁴`, rest-state depth 5500 m, and an fp32 precision policy.
+- `legoesm.core.transcendentals` loads glibc's `libm.so.6` at import time. Importing the ocean model therefore fails on macOS.
+  `legoesm/macos-libm.patch` falls back to the platform libm.
+- In the repository at `b5204364b`, ~78% of the 16,696 commits since February 2026 carry a Claude co-author trailer.
+  It contains ~620k lines of package code and ~850k lines of tests; the lat-lon C-grid ocean model is one 15,900-line file.
 
 ## Flux-form momentum advection suppresses the instability
 
@@ -87,11 +131,20 @@ cp nemo/namelist_cfg nemo/file_def_nemo-oce.xml $NEMO/tests/MY_CANAL/EXP00/
 (cd $NEMO/tests/MY_CANAL/EXP00 && mpirun -np 16 ./nemo)
 ```
 
+### legoESM
+
+```sh
+git clone https://github.com/climate-federation/legoESM && cd legoESM
+git checkout b5204364b && git apply $THIS_DIR/legoesm/macos-libm.patch   # macOS only
+uv sync
+JAX_PLATFORMS=cpu JAX_ENABLE_X64=1 .venv/bin/python $THIS_DIR/canal_jet_legoesm.py   # writes canal_jet_legoesm.nc
+```
+
 ### Animation
 
 ```sh
-julia --project animate_comparison.jl $NEMO/tests/MY_CANAL/EXP00   # writes canal_jet_nemo_vs_oceananigans.mp4
+julia --project animate_comparison.jl $NEMO/tests/MY_CANAL/EXP00   # writes canal_jet_three_models.mp4
 ```
 
 The script stitches NEMO's per-rank XIOS files (sequential NetCDF writes one file per rank) and
-reads the Oceananigans JLD2 output from the current directory.
+reads the Oceananigans JLD2 and legoESM NetCDF output from the current directory.

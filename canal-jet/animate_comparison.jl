@@ -1,8 +1,9 @@
-# Side-by-side animation of the NEMO CANAL jet and its Oceananigans replica.
+# Side-by-side animation of the NEMO CANAL jet and its Oceananigans and legoESM replicas.
 #
 # Run with `julia --project animate_comparison.jl /path/to/NEMO/EXP00 [output.mp4]`, where EXP00 holds
 # NEMO's per-rank XIOS output `CANAL_grid_T_*.nc` (soce, ssrelvor) and `canal_jet_oceananigans.jld2`
-# (written by `canal_jet.jl`) is in the current directory.
+# (written by `canal_jet.jl`) and `canal_jet_legoesm.nc` (written by `canal_jet_legoesm.py`) are in the
+# current directory.
 
 using Oceananigans
 using JLD2
@@ -11,7 +12,7 @@ using CairoMakie
 using Printf
 
 nemo_dir = ARGS[1]
-output = length(ARGS) > 1 ? ARGS[2] : "canal_jet_nemo_vs_oceananigans.mp4"
+output = length(ARGS) > 1 ? ARGS[2] : "canal_jet_three_models.mp4"
 
 # ## NEMO: stitch per-rank XIOS files into global (x, y, t) arrays
 
@@ -64,7 +65,15 @@ times = S_ocnn.times
 xᶜ_ocnn, yᶜ_ocnn, _ = nodes(S_ocnn)
 xᶠ_ocnn, yᶠ_ocnn, _ = nodes(ζ_ocnn)
 
-Nt = min(Nt_nemo, length(times) - 1)
+# ## legoESM (written by `canal_jet_legoesm.py`, also saving the initial state)
+
+lego = NCDataset("canal_jet_legoesm.nc")
+S_lego = lego["S"]       # (x, y, time) in Julia's column-major order
+ζ_lego = lego["zeta"]
+xᶜ_lego, yᶜ_lego = lego["x"][:] .* 1e-3, lego["y"][:] .* 1e-3
+xᶠ_lego, yᶠ_lego = lego["xf"][:] .* 1e-3, lego["yf"][:] .* 1e-3
+
+Nt = minimum((Nt_nemo, length(times) - 1, length(lego["time"]) - 1))
 
 # ## Figure
 
@@ -77,35 +86,38 @@ S₁ = @lift S_nemo[:, :, $n]
 ζ₁ = @lift ζ_nemo[:, :, $n] ./ f₀
 S₂ = @lift interior(S_ocnn[$n + 1], :, :, 1)
 ζ₂ = @lift interior(ζ_ocnn[$n + 1], :, :, 1) ./ f₀
+S₃ = @lift Float64.(S_lego[:, :, $n + 1])
+ζ₃ = @lift Float64.(ζ_lego[:, :, $n + 1]) ./ f₀
 
-fig = Figure(size = (1600, 900), fontsize = 18)
+fig = Figure(size = (2200, 900), fontsize = 18)
 
 title = @lift @sprintf("Barotropic instability of a 1 m s⁻¹ jet  —  day %.2f", times[$n + 1] / 86400)
-Label(fig[0, 1:2], title, fontsize = 24, font = :bold)
+Label(fig[0, 1:3], title, fontsize = 26, font = :bold)
 
-Label(fig[1, 1], "NEMO 4.2 · UBS advection, bilaplacian viscosity, leapfrog", tellwidth = false)
-Label(fig[1, 2], "Oceananigans · WENOVectorInvariant(order=9) momentum, WENO(order=9) tracer, no closure", tellwidth = false)
+Label(fig[1, 1], "NEMO 4.2\nUBS momentum + bilaplacian viscosity, UBS tracer", tellwidth = false)
+Label(fig[1, 2], "Oceananigans 0.113\nWENO9 vector-invariant momentum, WENO9 tracer", tellwidth = false)
+Label(fig[1, 3], "legoESM 1.0\nWENO9 vector-invariant momentum, WENO7 tracer", tellwidth = false)
 
 axis_kw = (aspect = DataAspect(), xticklabelsvisible = false, yticklabelsvisible = false,
            xticksvisible = false, yticksvisible = false)
 
-axS₁ = Axis(fig[2, 1]; axis_kw...)
-axS₂ = Axis(fig[2, 2]; axis_kw...)
-axζ₁ = Axis(fig[3, 1]; axis_kw...)
-axζ₂ = Axis(fig[3, 2]; axis_kw...)
+axS = [Axis(fig[2, j]; axis_kw...) for j in 1:3]
+axζ = [Axis(fig[3, j]; axis_kw...) for j in 1:3]
 
 S_kw = (colormap = :magma, colorrange = (30, 35))
 ζ_kw = (colormap = :balance, colorrange = (-1, 1))
 
-hmS = heatmap!(axS₁, xᶜ, yᶜ, S₁; S_kw...)
-heatmap!(axS₂, xᶜ_ocnn .* km, yᶜ_ocnn .* km, S₂; S_kw...)
-hmζ = heatmap!(axζ₁, xᶠ, yᶠ, ζ₁; ζ_kw...)
-heatmap!(axζ₂, xᶠ_ocnn .* km, yᶠ_ocnn .* km, ζ₂; ζ_kw...)
+hmS = heatmap!(axS[1], xᶜ, yᶜ, S₁; S_kw...)
+heatmap!(axS[2], xᶜ_ocnn .* km, yᶜ_ocnn .* km, S₂; S_kw...)
+heatmap!(axS[3], xᶜ_lego, yᶜ_lego, S₃; S_kw...)
+hmζ = heatmap!(axζ[1], xᶠ, yᶠ, ζ₁; ζ_kw...)
+heatmap!(axζ[2], xᶠ_ocnn .* km, yᶠ_ocnn .* km, ζ₂; ζ_kw...)
+heatmap!(axζ[3], xᶠ_lego, yᶠ_lego, ζ₃; ζ_kw...)
 
-Colorbar(fig[2, 3], hmS, label = "Salinity dye (g kg⁻¹)")
-Colorbar(fig[3, 3], hmζ, label = "Vertical vorticity ζ / f")
+Colorbar(fig[2, 4], hmS, label = "Salinity dye (g kg⁻¹)")
+Colorbar(fig[3, 4], hmζ, label = "Vertical vorticity ζ / f")
 
-Label(fig[4, 1:2], "2005 × 995 km periodic channel, 5 km grid, f-plane at 38.5ᵒN, 1000 m deep", fontsize = 15)
+Label(fig[4, 1:3], "2005 × 995 km periodic channel, 5 km grid, f-plane at 38.5ᵒN, 1000 m deep, no closure except NEMO's", fontsize = 15)
 
 rowgap!(fig.layout, 8)
 colgap!(fig.layout, 12)
@@ -114,5 +126,7 @@ resize_to_layout!(fig)
 record(fig, output, 1:Nt; framerate = 15) do nn
     n[] = nn
 end
+
+close(lego)
 
 @info "Saved $output with $Nt frames"
