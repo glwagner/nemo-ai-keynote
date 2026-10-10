@@ -98,6 +98,15 @@ model = LatLonCGridOceanModel(grid, z, config)
 Δt = 600.0
 state = model.seed_scan_carry(state, Δt)
 
+# legoESM seeds the AB2 history with zeros, so its first step applies (3/2 + ε) × the t = 0 tendencies.
+# On this geostrophically balanced jet that over-applies Coriolis and kicks a uniform 0.03 m/s
+# meridional flow across the jet, which seeds the instability. Warm-start the history instead:
+# a throwaway step stores the t = 0 tendencies in the *_prev fields, and copying them onto the
+# initial state makes the first AB2 step a forward-Euler step, as in Oceananigans.
+probe = jax.jit(lambda s: model.step(s, Δt))(state)
+state = state._replace(**{k: getattr(probe, k) for k in state._fields
+                          if k.endswith("_prev") and getattr(probe, k) is not None})
+
 steps_per_output = 36                                  # 6 hours
 n_outputs = int(round(stop_days * 86400 / (Δt * steps_per_output)))
 

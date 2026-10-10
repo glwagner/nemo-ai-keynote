@@ -28,31 +28,29 @@ but different numerics.
 
 ## What differs
 
-All three runs start from similar perturbation levels, then grow at very different rates.
+All three runs start from similar perturbation levels, then grow at different rates.
 The table gives zonal-anomaly variance of the dye:
 
 | Day | NEMO | Oceananigans | legoESM |
 |---|---|---|---|
-| 2 | 2.2×10⁻⁸ | 3.9×10⁻⁹ | 2.0×10⁻⁸ |
-| 6 | 2.1×10⁻⁶ | 3.1×10⁻⁸ | 4.4×10⁻⁴ |
-| 10 | 1.1×10⁻⁴ | 1.0×10⁻⁷ | 0.25 |
-| 16 | 2.1×10⁻² | 2.0×10⁻⁴ | 0.89 |
-| 20 | 0.22 | 0.19 | 1.05 |
-| 60 | 3.2 | 2.3 | 2.6 |
+| 2 | 2.2×10⁻⁸ | 3.9×10⁻⁹ | 3.6×10⁻⁹ |
+| 6 | 2.1×10⁻⁶ | 3.1×10⁻⁸ | 1.5×10⁻⁷ |
+| 10 | 1.1×10⁻⁴ | 1.0×10⁻⁷ | 1.3×10⁻³ |
+| 14 | 4.3×10⁻³ | 1.1×10⁻⁶ | 0.34 |
+| 20 | 0.22 | 0.19 | 0.95 |
+| 60 | 3.2 | 2.3 | 2.5 |
 
-For comparison, linear theory for an inviscid vortex sheet at NEMO's ~250 km billow wavelength gives σ = kU/2 ≈ 1.3×10⁻⁵ s⁻¹.
-That is ≈9× per day in dye variance.
-
-- **legoESM** grows at ≈12× per day from day 2 and saturates by day ~10. That is the closest to sheet theory.
-- **NEMO** grows steadily at ≈3× per day. Its bilaplacian viscosity and UBS smear the shear layers to ~50 km, which slows growth.
+- **NEMO** grows steadily at ≈3× per day from day 2. Its bilaplacian viscosity and UBS smear the shear layers to ~50 km.
   It forms ~8 regularly spaced billows, then a few large, weak eddies (|ζ/f| ≲ 0.4).
-- **Oceananigans** grows at only ≈1.5× per day for ~12 days, then rapidly.
-- Oceananigans and legoESM share the same nominal momentum scheme (WENO9 vector-invariant). Both keep the shear layers sharp,
-  then form compact, intense vortices (|ζ/f| ≈ 1) that merge. The late-stage fields look alike.
-  The early growth rates differ by ~8× per day, so the two discretizations of nominally the same scheme
-  differ in how they treat a one-cell shear layer. Why is not yet diagnosed.
-  The cause is not the divergence smoothness. The `W9V` preset's default full-divergence smoothness
-  and Oceananigans' self-upwinded divergence give legoESM dye variances within 2% through day 20.
+- **Oceananigans** and **legoESM** use the same momentum scheme: WENO9 vector-invariant with velocity-stencil vorticity
+  and self-upwinded divergence. They agree to within a few times through day 6. legoESM then pulls ahead and saturates by day ~14;
+  Oceananigans saturates by day ~20. Both keep the shear layers sharp and form compact, intense vortices (|ζ/f| ≈ 1)
+  that merge. The late-stage fields look alike.
+- Seeded instead with the same clean 250 km, 1 mm s⁻¹ meridional-velocity perturbation at the jet edges,
+  Oceananigans and legoESM agree to within 2.5× in dye variance through day 8 (0.13 and 0.17 at day 8).
+  So the shear-instability growth rates match, and the remaining onset difference comes from how the jet is seeded.
+  One likely contributor is legoESM's periodic-seam defect (below), which seeds an instability that
+  saturates by day ~16 even with no imposed noise. This has not been isolated.
 
 ## Performance
 
@@ -63,7 +61,7 @@ That is ≈9× per day in dye variance.
 | Oceananigans | 125 s (109 s time-stepping + ~15 s Julia load/compile) | 13 ms | 8 threads |
 | NEMO | 154 s | 18 ms | 8 MPI ranks |
 | NEMO | ~126 s | 15 ms | 16 MPI ranks |
-| legoESM | 635 s (2 s JIT compile) | 73 ms | JAX/XLA CPU, ≈4.5 cores busy on average (user + sys time / wall) |
+| legoESM | 640 s (2 s JIT compile) | 74 ms | JAX/XLA CPU, ≈4.5 cores busy on average (user + sys time / wall) |
 
 legoESM is ~5× slower than Oceananigans and ~4× slower than NEMO here. It targets GPUs and TPUs.
 On Apple silicon, its docs recommend the CPU backend because Metal is float32-only. Each run is a single measurement.
@@ -75,6 +73,14 @@ On Apple silicon, its docs recommend the CPU backend because Metal is float32-on
   So the replica needed no source changes to the ocean model.
 - Several defaults change the physics silently if not overridden: lateral viscosity `A_h = 10⁴ m² s⁻¹`,
   SSH diffusion `barotropic_diffusion_alpha = 0.01`, haline contraction `β_S = 7.4×10⁻⁴`, rest-state depth 5500 m, and an fp32 precision policy.
+- **AB2 cold start.** legoESM seeds its AB2 history with zeros, so the first step applies (3/2 + ε) × the t = 0 tendencies.
+  On this geostrophically balanced jet, that over-applies Coriolis for one step. It kicks a uniform 0.033 m s⁻¹ meridional flow
+  across the jet and leaves a 0.016 m s⁻¹ rms inertial oscillation, which made the jet go unstable ~4 days early.
+  `canal_jet_legoesm.py` warm-starts the history: one throwaway step stores the t = 0 tendencies, which are then
+  copied onto the initial state, so the first AB2 step is forward Euler, as in Oceananigans. This cuts the spurious v ~80×.
+- **Periodic-seam defect.** From an exactly zonally uniform jet with no noise, legoESM changes salinity only in the
+  last tracer column on step 1 (by 1.4×10⁻¹⁴). The anomaly grows to ~10⁻⁹ within 4 steps, spreads into the domain,
+  and the jet goes unstable by day ~14. Oceananigans keeps the same initial condition zonally uniform to ~10⁻²⁸ for 10 days.
 - `legoesm.core.transcendentals` loads glibc's `libm.so.6` at import time. Importing the ocean model therefore fails on macOS.
   `legoesm/macos-libm.patch` falls back to the platform libm.
 - In the repository at `b5204364b`, ~78% of the 16,696 commits since February 2026 carry a Claude co-author trailer.
