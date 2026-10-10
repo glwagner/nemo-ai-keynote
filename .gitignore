@@ -10,3 +10,5 @@ analysis/data/commits.raw
 scratch/
 north-atlantic/data/
 north-atlantic/*.mp4
+sst-spectra/data/
+sst-spectra/*.mp4

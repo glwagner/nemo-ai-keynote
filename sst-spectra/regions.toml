@@ -1,0 +1,98 @@
+# Candidate 8°×8° (or smaller) boxes for SST-gradient wavenumber spectra.
+# satellite: which geostationary L3C product views the box most directly.
+#   goes   = ABI_G19-STAR-L3C-v3.0        (GOES-19 at 75.2°W, 0.02°)
+#   seviri = SEVIRI_SST-OSISAF-L3C-v1.0   (Meteosat-10 at 0°, 0.05°)
+# Longitudes in degrees east (-180..180).
+
+[gulf_stream]
+name = "Gulf Stream"
+lat = [34.0, 42.0]
+lon = [-72.0, -64.0]
+satellite = "goes"
+
+[gulf_stream_extension]
+name = "Gulf Stream extension"
+lat = [36.0, 44.0]
+lon = [-60.0, -52.0]
+satellite = "goes"
+
+[sargasso]
+name = "Sargasso Sea"
+lat = [24.0, 32.0]
+lon = [-68.0, -60.0]
+satellite = "goes"
+
+[loop_current]
+name = "Loop Current (Gulf of Mexico)"
+lat = [22.0, 30.0]
+lon = [-92.0, -84.0]
+satellite = "goes"
+
+[caribbean]
+name = "Caribbean Sea"
+lat = [12.0, 20.0]
+lon = [-78.0, -70.0]
+satellite = "goes"
+
+[nbc_rings]
+name = "North Brazil Current rings"
+lat = [4.0, 12.0]
+lon = [-56.0, -48.0]
+satellite = "goes"
+
+[brazil_malvinas]
+name = "Brazil–Malvinas Confluence"
+lat = [-46.0, -38.0]
+lon = [-58.0, -50.0]
+satellite = "goes"
+
+[peru]
+name = "Peru upwelling"
+lat = [-18.0, -10.0]
+lon = [-84.0, -76.0]
+satellite = "goes"
+
+[algerian]
+name = "Algerian Basin (W. Mediterranean)"
+lat = [36.5, 40.5]
+lon = [0.0, 8.0]
+satellite = "seviri"
+
+[levantine]
+name = "Levantine Basin (E. Mediterranean)"
+lat = [31.5, 35.5]
+lon = [26.0, 34.0]
+satellite = "seviri"
+
+[canary]
+name = "Canary upwelling"
+lat = [20.0, 28.0]
+lon = [-26.0, -18.0]
+satellite = "seviri"
+
+[agulhas]
+name = "Agulhas retroflection"
+lat = [-44.0, -36.0]
+lon = [14.0, 22.0]
+satellite = "seviri"
+
+[benguela]
+name = "Benguela upwelling"
+lat = [-30.0, -22.0]
+lon = [6.0, 14.0]
+satellite = "seviri"
+
+# Cross-satellite check: the same box and hour seen by both GOES-19 and SEVIRI (~50° zenith each)
+[mid_atlantic_goes]
+name = "Mid-Atlantic subtropical gyre (GOES-19, 03 UTC)"
+lat = [25.0, 33.0]
+lon = [-42.0, -34.0]
+satellite = "goes"
+hour = 3
+
+[mid_atlantic_seviri]
+name = "Mid-Atlantic (SEVIRI)"
+lat = [25.0, 33.0]
+lon = [-42.0, -34.0]
+satellite = "seviri"
+hour = 3

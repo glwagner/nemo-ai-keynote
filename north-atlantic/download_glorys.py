@@ -2,6 +2,8 @@
 
 Reads the public Copernicus Marine ARCO Zarr store (no login needed) and writes
 one NetCDF file with float32 surface fields over the North Atlantic domain.
+
+    python download_glorys.py [START END]   # default: the surface-speed window in common.py
 """
 
 import sys
@@ -14,12 +16,13 @@ from common import LAT_MAX, LAT_MIN, LON_MAX, LON_MIN, SPEED_END, SPEED_START
 URL = ("https://s3.waw3-1.cloudferro.com/mdl-arco-time-025/arco/GLOBAL_MULTIYEAR_PHY_001_030/"
        "cmems_mod_glo_phy_my_0.083deg_P1D-m_202311/timeChunked.zarr")
 
-out = Path(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).parent / "data" / "glorys_surface.nc")
+start, end = sys.argv[1:3] if len(sys.argv) > 2 else (SPEED_START, SPEED_END)
+out = Path(__file__).parent / "data" / f"glorys_surface_{start}_{end}.nc"
 out.parent.mkdir(parents=True, exist_ok=True)
 
 ds = xr.open_zarr(URL, zarr_format=2)
 ds = ds[["uo", "vo", "thetao"]].sel(
-    time=slice(SPEED_START, SPEED_END),
+    time=slice(start, end),
     longitude=slice(LON_MIN, LON_MAX),
     latitude=slice(LAT_MIN, LAT_MAX),
 )

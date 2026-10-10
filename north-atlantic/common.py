@@ -7,5 +7,5 @@ LAT_MIN, LAT_MAX = 20.0, 60.0
 # GLORYS surface-velocity animation window (GLORYS12 daily ends 2026-08-25).
 SPEED_START, SPEED_END = "2026-01-01", "2026-08-25"
 
-# Window for the GLORYS vs. geostationary |∇T| comparison.
+# Default window for the GLORYS vs. geostationary |∇T| comparison (override on the command line).
 GRADIENT_START, GRADIENT_END = "2026-03-01", "2026-03-31"

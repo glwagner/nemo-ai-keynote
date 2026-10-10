@@ -1,6 +1,7 @@
-# Animate GLORYS12 daily surface speed over the North Atlantic.
+# Animate surface speed over the North Atlantic.
 #
-#   julia --project=north-atlantic north-atlantic/animate_surface_speed.jl
+#   julia --project=north-atlantic north-atlantic/animate_surface_speed.jl            # GLORYS12 daily, 2026
+#   julia --project=north-atlantic north-atlantic/animate_surface_speed.jl START END  # Mercator hourly analysis
 
 using CairoMakie
 using NCDatasets
@@ -9,7 +10,17 @@ using Printf
 
 const dir = @__DIR__
 
-ds = NCDataset(joinpath(dir, "data", "glorys_surface.nc"))
+hourly = length(ARGS) >= 2
+if hourly
+    window = ARGS[1] * "_" * ARGS[2]
+    ds = NCDataset(joinpath(dir, "data", "mercator_hourly_$window.nc"))
+    name, date_format, framerate = "Mercator 1/12° analysis hourly-mean surface speed", "d U yyyy  HH:MM \\U\\T\\C", 24
+    output = "mercator-surface-speed-hourly_$window"
+else
+    ds = NCDataset(joinpath(dir, "data", "glorys_surface_2026-01-01_2026-08-25.nc"))
+    name, date_format, framerate = "GLORYS12 surface speed", "d U yyyy", 12
+    output = "glorys-surface-speed"
+end
 λ = Float64.(ds["longitude"][:])
 φ = Float64.(ds["latitude"][:])
 t = ds["time"][:]
@@ -38,14 +49,14 @@ s = @lift surface_speed($n)
 hm = heatmap!(ax, λ, φ, s; colormap = :magma, colorrange = (0, 1.5), nan_color = land)
 Colorbar(fig[1, 2], hm; label = "Surface speed (m s⁻¹)", height = Relative(0.7))
 
-title = @lift "GLORYS12 surface speed · " * Dates.format(t[$n], "d U yyyy")
+title = @lift name * " · " * Dates.format(t[$n], date_format)
 Label(fig[0, :], title; fontsize = 30, tellwidth = false)
 
-record(fig, joinpath(dir, "glorys-surface-speed.mp4"), 1:length(t); framerate = 12) do i
+record(fig, joinpath(dir, output * ".mp4"), 1:length(t); framerate) do i
     n[] = i
 end
 
-n[] = findfirst(==(DateTime(2026, 3, 15)), t)
-save(joinpath(dir, "glorys-surface-speed.png"), fig)
+n[] = hourly ? cld(length(t), 2) : findfirst(==(DateTime(2026, 3, 15)), t)
+save(joinpath(dir, output * ".png"), fig)
 
 close(ds)

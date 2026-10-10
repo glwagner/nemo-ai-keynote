@@ -1,9 +1,17 @@
-# Compare the magnitude of the horizontal SST gradient |∇T| in GLORYS12 (top)
-# with a GOES-19 + Meteosat SEVIRI geostationary mosaic (bottom).
+# Compare the magnitude of the horizontal SST gradient |∇T| in a 1/12° NEMO ocean
+# model (top) with a GOES-19 + Meteosat SEVIRI geostationary mosaic (bottom).
 #
-# Both fields are daily means on the GLORYS 1/12° grid; see download_geostationary_sst.py.
+#   julia --project=north-atlantic north-atlantic/animate_sst_gradient.jl [START END [hourly]]
 #
-#   julia --project=north-atlantic north-atlantic/animate_sst_gradient.jl
+# Daily mode (default) compares GLORYS12 daily means with daily clear-sky satellite means
+# (data/geostationary_sst_START_END.nc, from download_geostationary_sst.py).
+#
+# Hourly mode compares hourly means from the Mercator operational analysis
+# (data/mercator_hourly_START_END.nc) with hourly satellite mosaics
+# (data/geostationary_sst_hourly_START_END.nc). Each satellite frame averages the clear-sky
+# observations within ±OBS_HALF_WINDOW hours, which fills short gaps between passing clouds.
+#
+# Without arguments the window is March 2026 in daily mode.
 
 using CairoMakie
 using NCDatasets
@@ -31,22 +39,53 @@ function gradient_magnitude(T, λ, φ)
     return G
 end
 
-glorys = NCDataset(joinpath(dir, "data", "glorys_surface.nc"))
-obs = NCDataset(joinpath(dir, "data", "geostationary_sst_daily.nc"))
+window = length(ARGS) >= 2 ? ARGS[1] * "_" * ARGS[2] : "2026-03-01_2026-03-31"
+hourly = length(ARGS) >= 3 && ARGS[3] == "hourly"
+const OBS_HALF_WINDOW = 1 # hours
 
-λ = Float64.(obs["longitude"][:])
-φ = Float64.(obs["latitude"][:])
-@assert maximum(abs, λ .- glorys["longitude"][:]) < 1e-3
-@assert maximum(abs, φ .- glorys["latitude"][:]) < 1e-3
+data(f) = joinpath(dir, "data", f)
+nanify(A) = Float64.(replace(A, missing => NaN))
+
+if hourly
+    obs = NCDataset(data("geostationary_sst_hourly_$window.nc"))
+    model = NCDataset(data("mercator_hourly_$window.nc"))
+    model_label = "Mercator operational analysis, 1/12° NEMO (hourly mean)"
+    obs_label = "GOES-19 ABI + Meteosat SEVIRI, clear-sky, ±$(OBS_HALF_WINDOW) h"
+    date_format = "d U yyyy  HH:MM \\U\\T\\C"
+    framerate = 24
+    output = "sst-gradient-mercator-vs-geostationary-hourly_$window"
+else
+    obs = NCDataset(data("geostationary_sst_$window.nc"))
+    # Any downloaded GLORYS file that contains every day of the window
+    glorys_files = filter(f -> startswith(f, "glorys_surface_"), readdir(joinpath(dir, "data")))
+    model = NCDataset(data(only(filter(f -> NCDataset(ds -> obs["time"][:] ⊆ ds["time"][:], data(f)), glorys_files))))
+    model_label = "GLORYS12 reanalysis (1/12°)"
+    obs_label = "Geostationary satellites: GOES-19 ABI + Meteosat SEVIRI, clear-sky daily mean"
+    date_format = "d U yyyy"
+    framerate = 4
+    output = "sst-gradient-glorys-vs-geostationary_$window"
+end
 
 dates = obs["time"][:]
-glorys_index = [findfirst(==(d), glorys["time"][:]) for d in dates]
+λ = Float64.(obs["longitude"][:])
+φ = Float64.(obs["latitude"][:])
+@assert maximum(abs, λ .- model["longitude"][:]) < 1e-3
+@assert maximum(abs, φ .- model["latitude"][:]) < 1e-3
 
-nanify(A) = Float64.(replace(A, missing => NaN))
-model_sst(n) = nanify(glorys["thetao"][:, :, glorys_index[n]])
-obs_sst(n) = nanify(obs["sst"][:, :, n])
+model_index = [findfirst(==(d), model["time"][:]) for d in dates]
+model_sst(n) = nanify(model["thetao"][:, :, model_index[n]])
 
-# Land: missing in GLORYS. Ocean cells missing from the observations are cloud or no coverage.
+function obs_sst(n)
+    hourly || return nanify(obs["sst"][:, :, n])
+    window = max(1, n - OBS_HALF_WINDOW):min(length(dates), n + OBS_HALF_WINDOW)
+    T = nanify(obs["sst"][:, :, window])
+    valid = isfinite.(T)
+    count = dropdims(sum(valid; dims = 3); dims = 3)
+    total = dropdims(sum(ifelse.(valid, T, 0.0); dims = 3); dims = 3)
+    return ifelse.(count .> 0, total ./ count, NaN)
+end
+
+# Land: missing in the model. Ocean cells missing from the observations are cloud or no coverage.
 land = isnan.(model_sst(1))
 land_overlay = [l ? 1.0 : NaN for l in land]
 
@@ -63,10 +102,9 @@ fig = Figure(size = (1200, 1500))
 n = Observable(1)
 fields = [@lift(gradient_magnitude(model_sst($n), λ, φ)),
           @lift(gradient_magnitude(obs_sst($n), λ, φ))]
-labels = ["GLORYS12 reanalysis (1/12°)",
-          "Geostationary satellites: GOES-19 ABI + Meteosat SEVIRI, clear-sky daily mean"]
+labels = [model_label, obs_label]
 
-colorrange = (0, 0.15)
+colorrange = hourly ? (0, 0.1) : (0, 0.15)
 heatmaps = []
 for (row, (G, label)) in enumerate(zip(fields, labels))
     ax = Axis(fig[row, 1]; aspect = AxisAspect(aspect), backgroundcolor = cloud_color,
@@ -82,16 +120,16 @@ for (row, (G, label)) in enumerate(zip(fields, labels))
 end
 
 Colorbar(fig[1:2, 2], first(heatmaps); label = "|∇T|  (K km⁻¹)", height = Relative(0.6))
-title = @lift "Sea surface temperature gradient · " * Dates.format(dates[$n], "d U yyyy")
+title = @lift "Sea surface temperature gradient · " * Dates.format(dates[$n], date_format)
 Label(fig[0, :], title; fontsize = 32, tellwidth = false)
 rowgap!(fig.layout, 10)
 
-record(fig, joinpath(dir, "sst-gradient-glorys-vs-geostationary.mp4"), eachindex(dates); framerate = 4) do i
+record(fig, joinpath(dir, output * ".mp4"), eachindex(dates); framerate) do i
     n[] = i
 end
 
-n[] = 15
-save(joinpath(dir, "sst-gradient-glorys-vs-geostationary.png"), fig)
+n[] = cld(length(dates), 2)
+save(joinpath(dir, output * ".png"), fig)
 
-close(glorys)
+close(model)
 close(obs)
