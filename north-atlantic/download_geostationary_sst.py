@@ -11,7 +11,9 @@ exp(-θ / θ₀) of the satellite zenith angle θ, so each region is dominated b
 satellite that views it most directly and the transition between them is smooth.
 
 Hourly files are deleted after processing; one NetCDF per day is written to
-data/geostationary/ and combined into data/geostationary_sst_daily.nc.
+data/geostationary/ and combined into data/geostationary_sst_START_END.nc.
+
+    python download_geostationary_sst.py [START END]   # default: the gradient window in common.py
 """
 
 import subprocess
@@ -48,7 +50,7 @@ LON = -180 + RES * np.arange(I0, I1 + 1)
 LAT = -80 + RES * np.arange(J0, J1 + 1)
 NX, NY = LON.size, LAT.size
 
-data_dir = Path(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).parent / "data")
+data_dir = Path(__file__).parent / "data"
 daily_dir = data_dir / "geostationary"
 daily_dir.mkdir(parents=True, exist_ok=True)
 
@@ -100,6 +102,16 @@ def bin_hour(path, min_quality):
     return (np.bincount(k, sst[ok], n), np.bincount(k, sza[ok], n), np.bincount(k, None, n))
 
 
+def blend(fields):
+    """Zenith-weighted blend of per-satellite SST fields `sst_<name>` with zenith angles `zenith_<name>`."""
+    w = {n: np.where(np.isfinite(fields[f"sst_{n}"]), np.exp(-fields[f"zenith_{n}"] / ZENITH_SCALE), 0.0)
+         for n in SATELLITES}
+    wsum = sum(w.values())
+    with np.errstate(invalid="ignore"):
+        sst = sum(w[n] * np.nan_to_num(fields[f"sst_{n}"]) for n in SATELLITES) / wsum
+    return np.where(wsum > 0, sst, np.nan)
+
+
 def process_day(day, urls_by_sat):
     out = daily_dir / f"{day:%Y%m%d}.nc"
     if out.exists():
@@ -119,13 +131,7 @@ def process_day(day, urls_by_sat):
         fields[f"n_{name}"] = c.astype("int16")
         print(f"  {day} {name}: {len(urls)} files, {(c > 0).mean():.1%} of cells observed", flush=True)
 
-    # Zenith-weighted blend of the two daily means
-    w = {n: np.where(np.isfinite(fields[f"sst_{n}"]), np.exp(-fields[f"zenith_{n}"] / ZENITH_SCALE), 0.0)
-         for n in SATELLITES}
-    wsum = sum(w.values())
-    with np.errstate(invalid="ignore"):
-        blend = sum(w[n] * np.nan_to_num(fields[f"sst_{n}"]) for n in SATELLITES) / wsum
-    fields["sst"] = np.where(wsum > 0, blend, np.nan)
+    fields["sst"] = blend(fields)
 
     ds = xr.Dataset(
         {k: (("latitude", "longitude"), v.astype("float32") if v.dtype.kind == "f" else v) for k, v in fields.items()},
@@ -137,7 +143,8 @@ def process_day(day, urls_by_sat):
 
 
 def main():
-    start, end = date.fromisoformat(GRADIENT_START), date.fromisoformat(GRADIENT_END)
+    window = sys.argv[1:3] if len(sys.argv) > 2 else (GRADIENT_START, GRADIENT_END)
+    start, end = map(date.fromisoformat, window)
     urls_by_sat = {n: granule_urls(sn, start, end) for n, (sn, _) in SATELLITES.items()}
     for n, u in urls_by_sat.items():
         print(f"{n}: {len(u)} granules", flush=True)
@@ -150,8 +157,9 @@ def main():
         "sources": "; ".join(sn for sn, _ in SATELLITES.values()) + " (PO.DAAC)",
         "method": __doc__,
     }
-    combined.to_netcdf(data_dir / "geostationary_sst_daily.nc")
-    print(f"wrote {data_dir / 'geostationary_sst_daily.nc'}")
+    out = data_dir / f"geostationary_sst_{start}_{end}.nc"
+    combined.to_netcdf(out)
+    print(f"wrote {out}")
 
 
 if __name__ == "__main__":
