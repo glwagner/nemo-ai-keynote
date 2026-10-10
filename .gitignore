@@ -8,3 +8,5 @@ analysis/data/prs-*.json
 analysis/data/pull_requests.json
 analysis/data/commits.raw
 scratch/
+north-atlantic/data/
+north-atlantic/*.mp4
