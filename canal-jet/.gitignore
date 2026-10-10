@@ -1,0 +1,4 @@
+*.jld2
+run.log
+*.nc
+run_legoesm.log
