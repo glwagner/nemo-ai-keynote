@@ -11,7 +11,7 @@ Working presentation and supporting analysis. The presentation snapshots were ex
 - [PDF](presentation/nemo-ai-keynote.pdf)
 - [PowerPoint](presentation/nemo-ai-keynote.pptx)
 - [Text outline and source links](presentation/outline.md)
-- [Working Google Slides deck](https://docs.google.com/presentation/d/1BCanQCPBgMl--LgAgLu-PaBM4s2KVMblNFeLsFNUoB4/edit) (access is governed by its existing Google Drive permissions)
+- [Working Google Slides deck](https://docs.google.com/presentation/d/1BCanQCPBgMl--LgAgLu-PaBM4s2KVMblNFeLsFNUoB4/edit?usp=sharing)
 
 The talk considers AI in model **usage**, **development**, and **parameterization**, including opportunities for faster experimentation and risks to attribution, understanding, human control, and equitable access.
 
