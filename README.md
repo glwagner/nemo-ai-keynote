@@ -15,6 +15,10 @@ Working presentation and supporting analysis. The presentation snapshots were ex
 
 The talk considers AI in model **usage**, **development**, and **parameterization**, including opportunities for faster experimentation and risks to attribution, understanding, human control, and equitable access.
 
+## NEMO WENO case study
+
+[glwagner/nemo-weno](https://github.com/glwagner/nemo-weno) contains the implementation and write-up for the talk’s case study on AI-assisted development of WENO advection in NEMO.
+
 ## Oceananigans development analysis
 
 [Methods, findings, and limitations](analysis/README.md) document an observational analysis of the public [CliMA/Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) repository, captured on **30 September 2026**: 3,731 PRs and 13,845 commits reachable from main at `b9725744cd313ed368bb7906880a5d884c4c78bf`.
